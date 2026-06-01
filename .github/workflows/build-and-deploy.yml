@@ -1,0 +1,57 @@
+name: Build and Deploy APT Repository
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the Automattic/studio repo
+      - name: Checkout Automattic/studio
+        uses: actions/checkout@v4
+        with:
+          repository: Automattic/studio
+          path: studio-source
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Step 3: Build
+      - name: Build Studio
+        run: cd studio-source && npm install && npm run package && chmod +x out/Studio-linux-x64/studio
+
+      # Step 4: Package as .deb
+      - name: Package as .deb
+        run: |
+          npm install -g electron-installer-debian
+          cd studio-source && electron-installer-debian --src="out/Studio-linux-x64/" --dest="../public/" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="studio"
+
+      # Step 5: APT Repo Setup
+      - name: Setup APT Repository
+        run: |
+          sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
+          cd public && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && apt-ftparchive release . > Release
+
+      # Step 6: GPG Import
+      - name: Import GPG Key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      # Step 7: Sign & Export Key
+      - name: Sign Release and Export Public Key
+        run: cd public && gpg --armor --detach-sign --output Release.gpg Release && gpg --clearsign --output InRelease Release && gpg --armor --export > public.key
+
+      # Step 8: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
