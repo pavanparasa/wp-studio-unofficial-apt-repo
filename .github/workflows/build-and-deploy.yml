@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       # Step 1: Checkout the Automattic/studio repo
@@ -29,19 +31,19 @@ jobs:
           cd studio-source
           npm install
 
-          # Build the app (handles both monorepo and root architectures)
+          # Build the app
           if npm run package; then echo "Built from root"; elif (cd apps/studio && npm run package); then echo "Built from apps"; else exit 1; fi
 
-          # Dynamically find the Electron output folder, ignoring node_modules
+          # Dynamically find the Electron output folder
           OUT_DIR=$(find . -type d -name "*-linux-x64" -not -path "*/node_modules/*" | head -n 1)
           if [ -z "$OUT_DIR" ]; then exit 1; fi
 
-          # Dynamically find the executable binary (safely handling spaces in names)
+          # Dynamically find the executable binary
           DIR_NAME=$(basename "$OUT_DIR")
           EXPECTED_BIN=${DIR_NAME%-linux-x64}
           BIN_PATH=$(find "$OUT_DIR" -maxdepth 1 -type f -iname "$EXPECTED_BIN" | head -n 1)
 
-          # Fallback: Find the largest file without an extension
+          # Fallback for binary
           if [ -z "$BIN_PATH" ]; then
             BIN_PATH=$(find "$OUT_DIR" -maxdepth 1 -type f ! -name "*.*" ! -name "chrome-sandbox" -print0 | xargs -0 ls -S | head -n 1)
           fi
@@ -51,7 +53,9 @@ jobs:
           ICON_PATH=$(find . -type f -name "studio-app-icon.png" -not -path "*/node_modules/*" | head -n 1)
 
           npm install -g electron-installer-debian
-          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
+
+          # THE ARCHITECTURE FIX: Added --arch="amd64"
+          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
 
       # Step 4: APT Repo Setup
       - name: Setup APT Repository
