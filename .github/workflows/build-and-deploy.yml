@@ -57,11 +57,18 @@ jobs:
           # THE ARCHITECTURE FIX: Added --arch="amd64"
           electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
 
-      # Step 4: APT Repo Setup
-      - name: Setup APT Repository
+      # Step 4: Release-Safe APT Generator
+      - name: Generate APT Repository Metadata
         run: |
           sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
-          cd public && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz && apt-ftparchive release . > Release
+          cd public
+          # Rename to a static filename so the GitHub Release overwrites it nightly without bloating
+          mv *.deb wordpress-studio-unofficial-latest.deb
+          # Generate metadata and strip the './' path to ensure GitHub asset URLs work perfectly
+          dpkg-scanpackages . /dev/null > Packages
+          sed -i 's|Filename: \./|Filename: |g' Packages
+          gzip -9c Packages > Packages.gz
+          apt-ftparchive release . > Release
 
       # Step 5: GPG Import
       - name: Import GPG Key
@@ -73,9 +80,11 @@ jobs:
       - name: Sign Release and Export Public Key
         run: cd public && gpg --armor --detach-sign --output Release.gpg Release && gpg --clearsign --output InRelease Release && gpg --armor --export > public.key
 
-      # Step 7: Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # Step 7: Upload to GitHub Release
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
+          tag_name: apt-repo
+          name: "WordPress Studio (Unofficial) APT Repository"
+          files: public/*
+          token: ${{ secrets.GITHUB_TOKEN }}
