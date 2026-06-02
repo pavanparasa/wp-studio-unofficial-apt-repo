@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      npm_config_legacy_peer_deps: true
 
     steps:
       # Step 1: Fetch the latest stable release tag
@@ -35,10 +36,9 @@ jobs:
       - name: Build, Discover, and Package
         run: |
           cd studio-source
-          # THE BYPASS: Tell NPM to ignore the React 18/19 conflicts
-          npm install --legacy-peer-deps
+          npm install
 
-          # Extract exact version from Automattic's package.json
+          # Extract exact stable version from Automattic's package.json
           APP_VERSION=$(node -p "try { require('./apps/studio/package.json').version } catch(e) { require('./package.json').version }")
           echo "Building WordPress Studio Version: $APP_VERSION"
 
@@ -67,7 +67,7 @@ jobs:
           npm install -g electron-installer-debian
           electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.version="$APP_VERSION" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
 
-      # Step 5: Release-Safe APT Generator
+      # Step 5: APT Generator
       - name: Generate APT Repository Metadata
         run: |
           sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
@@ -83,7 +83,7 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      # Step 7: Sign & Export Key
+      # Step 7: Sign Key
       - name: Sign Release and Export Public Key
         run: |
           cd public
@@ -91,7 +91,7 @@ jobs:
           gpg --clearsign --output InRelease Release
           gpg --armor --export > public.key
 
-      # Step 8: Upload to GitHub Release
+      # Step 8: GitHub Release Deployment
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
