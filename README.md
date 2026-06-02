@@ -30,7 +30,7 @@ sudo apt update && sudo apt install wordpress-studio-unofficial
 
 Once installed, WordPress Studio (Unofficial) will automatically appear with its system icon inside your desktop's application menu, ready to pin to your system dock.
 
-🛠️ System Architecture
+## 🛠️ System Architecture
 This repository operates on a completely transparent, zero-cost pipeline using modern cloud infrastructure:
 
 Automation: A cron schedule executes a secure GitHub Actions runner daily at midnight UTC.
@@ -41,7 +41,7 @@ Packaging: The build invokes electron-installer-debian to dynamically map depend
 
 Distribution: Because the compiled client exceeds 300MB, the workflow builds a "Flat Repository" layout and pushes the complete deployment payload seamlessly to GitHub Releases to provide users with maximum download bandwidth.
 
-🗑️ Removal Instructions
+## 🗑️ Removal Instructions
 If you ever decide to remove the application and clean up the repository definitions from your operating system, execute the following commands:
 
 sudo apt remove wordpress-studio-unofficial
