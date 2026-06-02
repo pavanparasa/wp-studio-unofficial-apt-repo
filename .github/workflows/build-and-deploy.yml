@@ -1,8 +1,6 @@
 name: Build and Deploy APT Repository
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
