@@ -10,20 +10,28 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      # Step 1: Checkout the Automattic/studio repo
+      # Step 1: Fetch the latest stable release tag
+      - name: Fetch Latest Stable Release Tag
+        run: |
+          LATEST_TAG=$(curl -sL -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/Automattic/studio/releases/latest | jq -r '.tag_name')
+          echo "tag=$LATEST_TAG" >> $GITHUB_ENV
+          echo "Targeting official stable release tag: $LATEST_TAG"
+
+      # Step 2: Checkout the stable release
       - name: Checkout Automattic/studio
         uses: actions/checkout@v4
         with:
           repository: Automattic/studio
           path: studio-source
+          ref: ${{ env.tag }}
 
-      # Step 2: Setup Node.js from .nvmrc
+      # Step 3: Setup Node.js from .nvmrc
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version-file: 'studio-source/.nvmrc'
 
-      # Step 3: Build, Discover, Rename Binary, and Package
+      # Step 4: Build, Discover, Rename Binary, and Package
       - name: Build, Discover, and Package
         run: |
           cd studio-source
@@ -53,13 +61,12 @@ jobs:
           BIN_NAME="wordpress-studio-unofficial"
           chmod +x "$BIN_PATH"
 
-          # Ensure absolute path for the icon so the packager never misses it
           ICON_PATH=$(find "$PWD" -type f -name "studio-app-icon.png" -not -path "*/node_modules/*" | head -n 1)
 
           npm install -g electron-installer-debian
           electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.version="$APP_VERSION" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
 
-      # Step 4: Release-Safe APT Generator
+      # Step 5: Release-Safe APT Generator
       - name: Generate APT Repository Metadata
         run: |
           sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
@@ -69,13 +76,13 @@ jobs:
           gzip -9c Packages > Packages.gz
           apt-ftparchive release . > Release
 
-      # Step 5: GPG Import
+      # Step 6: GPG Import
       - name: Import GPG Key
         uses: crazy-max/ghaction-import-gpg@v6
         with:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      # Step 6: Sign & Export Key
+      # Step 7: Sign & Export Key
       - name: Sign Release and Export Public Key
         run: |
           cd public
@@ -83,7 +90,7 @@ jobs:
           gpg --clearsign --output InRelease Release
           gpg --armor --export > public.key
 
-      # Step 7: Upload to GitHub Release
+      # Step 8: Upload to GitHub Release
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:

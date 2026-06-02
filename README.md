@@ -55,10 +55,10 @@ This repository operates on a completely transparent, zero-cost pipeline using m
 
 | Stage | Description |
 |-------|-------------|
-| **⏰ Automation** | A manually triggered GitHub Actions workflow (`workflow_dispatch`) executes a secure runner on demand. | This is because Wordpress Studio releases are not very frequent and i will be monitoring this and trigger the build manually when a new version is released.
+| **⏰ Automation** | A manually triggered GitHub Actions workflow (`workflow_dispatch`) queries the GitHub API for the latest **stable** release tag before building, ensuring beta/development versions are never packaged. |
 | **🔨 Compilation** | The pipeline checks the latest release tag on the official [Automattic/studio](https://github.com/Automattic/studio) repository, installs the targeted version of Node.js specified by the developers, and compiles the raw Linux production binaries out of the source monorepo layout. |
 | **📦 Packaging** | The build invokes `electron-installer-debian` to dynamically map dependencies and bundle the native app interface. |
-| **🚀 Distribution** | Because the compiled client exceeds 300 MB, the workflow builds a "Flat Repository" layout and pushes the complete deployment payload seamlessly to GitHub Releases to provide users with maximum download bandwidth. |
+| **🚀 Distribution** | APT Installation & Deb Files |
 
 ---
 
