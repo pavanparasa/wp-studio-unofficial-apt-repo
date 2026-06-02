@@ -1,6 +1,8 @@
 name: Build and Deploy APT Repository
 
 on:
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -23,46 +25,47 @@ jobs:
         with:
           node-version-file: 'studio-source/.nvmrc'
 
-      # Step 3: Build, Discover, and Package
+      # Step 3: Build, Discover, Rename Binary, and Package
       - name: Build, Discover, and Package
         run: |
           cd studio-source
           npm install
 
-          # Build the app
+          # Extract exact version from Automattic's package.json
+          APP_VERSION=$(node -p "try { require('./apps/studio/package.json').version } catch(e) { require('./package.json').version }")
+          echo "Building WordPress Studio Version: $APP_VERSION"
+
           if npm run package; then echo "Built from root"; elif (cd apps/studio && npm run package); then echo "Built from apps"; else exit 1; fi
 
-          # Dynamically find the Electron output folder
-          OUT_DIR=$(find . -type d -name "*-linux-x64" -not -path "*/node_modules/*" | head -n 1)
+          OUT_DIR=$(find "$PWD" -type d -name "*-linux-x64" -not -path "*/node_modules/*" | head -n 1)
           if [ -z "$OUT_DIR" ]; then exit 1; fi
 
-          # Dynamically find the executable binary
           DIR_NAME=$(basename "$OUT_DIR")
           EXPECTED_BIN=${DIR_NAME%-linux-x64}
           BIN_PATH=$(find "$OUT_DIR" -maxdepth 1 -type f -iname "$EXPECTED_BIN" | head -n 1)
 
-          # Fallback for binary
           if [ -z "$BIN_PATH" ]; then
             BIN_PATH=$(find "$OUT_DIR" -maxdepth 1 -type f ! -name "*.*" ! -name "chrome-sandbox" -print0 | xargs -0 ls -S | head -n 1)
           fi
 
-          BIN_NAME=$(basename "$BIN_PATH")
+          # THE TASKBAR ICON FIX: Rename the binary to map to the Wayland window class perfectly
+          NEW_BIN_PATH="$(dirname "$BIN_PATH")/wordpress-studio-unofficial"
+          mv "$BIN_PATH" "$NEW_BIN_PATH"
+          BIN_PATH="$NEW_BIN_PATH"
+          BIN_NAME="wordpress-studio-unofficial"
           chmod +x "$BIN_PATH"
-          ICON_PATH=$(find . -type f -name "studio-app-icon.png" -not -path "*/node_modules/*" | head -n 1)
+
+          # Ensure absolute path for the icon so the packager never misses it
+          ICON_PATH=$(find "$PWD" -type f -name "studio-app-icon.png" -not -path "*/node_modules/*" | head -n 1)
 
           npm install -g electron-installer-debian
-
-          # THE ARCHITECTURE FIX: Added --arch="amd64"
-          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
+          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.version="$APP_VERSION" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
 
       # Step 4: Release-Safe APT Generator
       - name: Generate APT Repository Metadata
         run: |
           sudo apt-get update && sudo apt-get install -y dpkg-dev apt-utils
           cd public
-          # Rename to a static filename so the GitHub Release overwrites it nightly without bloating
-          mv *.deb wordpress-studio-unofficial-latest.deb
-          # Generate metadata and strip the './' path to ensure GitHub asset URLs work perfectly
           dpkg-scanpackages . /dev/null > Packages
           sed -i 's|Filename: \./|Filename: |g' Packages
           gzip -9c Packages > Packages.gz
@@ -76,7 +79,11 @@ jobs:
 
       # Step 6: Sign & Export Key
       - name: Sign Release and Export Public Key
-        run: cd public && gpg --armor --detach-sign --output Release.gpg Release && gpg --clearsign --output InRelease Release && gpg --armor --export > public.key
+        run: |
+          cd public
+          gpg --armor --detach-sign --output Release.gpg Release
+          gpg --clearsign --output InRelease Release
+          gpg --armor --export > public.key
 
       # Step 7: Upload to GitHub Release
       - name: Upload to GitHub Release
