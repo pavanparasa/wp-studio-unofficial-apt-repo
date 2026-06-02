@@ -12,7 +12,7 @@ A fully automated, self-updating Debian/Ubuntu package repository for [WordPress
 
 ---
 
-Automattic builds fantastic software, but native Linux desktop integration usually requires downloading manual binaries that do not update themselves. This project automates that headache away. With one click, a GitHub Action pulls the official upstream source code, builds the Linux desktop binary, packages it into a standard `.deb` installer, and signs the release.
+Automattic's Wordpress Studio is awesome! It uses WebAssembly (Wasm) to eliminate the need for traditional backend servers during local development. It has great Macos & Windows Apps but native Linux desktop integration usually requires downloading manual binaries & building locally & that does not update. This project automates that headache away. With one click, a GitHub Action pulls the official upstream source code, builds the Linux desktop binary, packages it into a standard `.deb` installer, and signs the release.
 
 By adding this repository to your system, you get a native WordPress local environment with updates delivered safely alongside your normal system packages via `apt upgrade`.
 
