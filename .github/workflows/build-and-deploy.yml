@@ -55,7 +55,6 @@ jobs:
             BIN_PATH=$(find "$OUT_DIR" -maxdepth 1 -type f ! -name "*.*" ! -name "chrome-sandbox" -print0 | xargs -0 ls -S | head -n 1)
           fi
 
-          # THE TASKBAR ICON FIX: Rename the binary to map to the Wayland window class perfectly
           NEW_BIN_PATH="$(dirname "$BIN_PATH")/wordpress-studio-unofficial"
           mv "$BIN_PATH" "$NEW_BIN_PATH"
           BIN_PATH="$NEW_BIN_PATH"
@@ -65,7 +64,9 @@ jobs:
           ICON_PATH=$(find "$PWD" -type f -name "studio-app-icon.png" -not -path "*/node_modules/*" | head -n 1)
 
           npm install -g electron-installer-debian
-          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.version="$APP_VERSION" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH"
+
+          # THE TASKBAR FIX: Injected --options.desktop.StartupWMClass="studio"
+          electron-installer-debian --src="$OUT_DIR" --dest="../public/" --arch="amd64" --options.version="$APP_VERSION" --options.name="wordpress-studio-unofficial" --options.productName="WordPress Studio (Unofficial)" --options.bin="$BIN_NAME" --options.icon="$ICON_PATH" --options.desktop.StartupWMClass="studio"
 
       # Step 5: APT Generator
       - name: Generate APT Repository Metadata
