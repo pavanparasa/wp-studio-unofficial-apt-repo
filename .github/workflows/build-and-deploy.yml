@@ -35,7 +35,8 @@ jobs:
       - name: Build, Discover, and Package
         run: |
           cd studio-source
-          npm install
+          # THE BYPASS: Tell NPM to ignore the React 18/19 conflicts
+          npm install --legacy-peer-deps
 
           # Extract exact version from Automattic's package.json
           APP_VERSION=$(node -p "try { require('./apps/studio/package.json').version } catch(e) { require('./package.json').version }")

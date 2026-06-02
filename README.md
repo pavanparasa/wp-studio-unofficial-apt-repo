@@ -64,7 +64,7 @@ This repository operates on a completely transparent, zero-cost pipeline using m
 
 ## 🗑️ Removal Instructions
 
-If you ever decide to remove the application and clean up the repository definitions from your operating system, execute the following commands:
+If you would like to remove the application and clean up the repository definitions from your operating system, execute the following commands:
 
 ```bash
 sudo apt remove wordpress-studio-unofficial
